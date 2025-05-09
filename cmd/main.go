@@ -13,9 +13,8 @@ import (
 func main() {
 	// Initialize configuration
 	cfg := config.LoadConfig()
-
 	// Initialize database
-	db, err := repository.InitDB(cfg.DatabasePath)
+	db, err := repository.InitDB("") // Empty string as we're using the config inside InitDB
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}

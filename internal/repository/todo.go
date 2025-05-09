@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/Nakib00/Todo-API-in-Go-with-SQLite/internal/models"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type TodoRepository interface {
@@ -28,7 +28,8 @@ func NewTodoRepository(db *sql.DB) TodoRepository {
 }
 
 func InitDB(databasePath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", databasePath)
+	// MySQL connection string format: username:password@tcp(host:port)/dbname
+	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/todo-go")
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +37,14 @@ func InitDB(databasePath string) (*sql.DB, error) {
 	// Create tables if they don't exist
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS todos (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL,
+			id VARCHAR(36) PRIMARY KEY,
+			title VARCHAR(255) NOT NULL,
 			description TEXT,
 			completed BOOLEAN DEFAULT FALSE,
-			priority INTEGER DEFAULT 3,
+			priority INT DEFAULT 3,
 			due_date DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {

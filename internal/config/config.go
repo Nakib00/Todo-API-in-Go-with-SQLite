@@ -1,13 +1,24 @@
 package config
 
 type Config struct {
-	ServerPort   string
-	DatabasePath string
+	ServerPort string
+	DBConfig   struct {
+		Username string
+		Password string
+		Host     string
+		Port     string
+		DBName   string
+	}
 }
 
 func LoadConfig() *Config {
-	return &Config{
-		ServerPort:   "8080",
-		DatabasePath: "./todos.db",
+	cfg := &Config{
+		ServerPort: "8080",
 	}
+	cfg.DBConfig.Username = "root"
+	cfg.DBConfig.Password = ""
+	cfg.DBConfig.Host = "localhost"
+	cfg.DBConfig.Port = "3306"
+	cfg.DBConfig.DBName = "todo-go"
+	return cfg
 }
