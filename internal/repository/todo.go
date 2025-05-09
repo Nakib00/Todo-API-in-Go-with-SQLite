@@ -3,9 +3,10 @@ package repository
 import (
 	"database/sql"
 	"time"
-	"todo-api/internal/models"
 
+	"github.com/Nakib00/Todo-API-in-Go-with-SQLite/internal/models"
 	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type TodoRepository interface {
