@@ -1,18 +1,15 @@
 package models
 
-import (
-	"time"
-)
-
+// Todo represents a todo item
 type Todo struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title" binding:"required"`
-	Description string    `json:"description"`
-	Completed   bool      `json:"completed"`
-	Priority    int       `json:"priority"` // 1-5 where 5 is highest
-	DueDate     time.Time `json:"due_date"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Completed   bool   `json:"completed"`
+	Priority    int    `json:"priority"`
+	DueDate     string `json:"due_date"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 // Advanced features could include:

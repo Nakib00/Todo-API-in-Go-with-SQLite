@@ -28,13 +28,11 @@ func NewTodoRepository(db *sql.DB) TodoRepository {
 }
 
 func InitDB(databasePath string) (*sql.DB, error) {
-	// MySQL connection string format: username:password@tcp(host:port)/dbname
 	db, err := sql.Open("mysql", "root:@tcp(localhost:3306)/todo-go")
 	if err != nil {
 		return nil, err
 	}
 
-	// Create tables if they don't exist
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS todos (
 			id VARCHAR(36) PRIMARY KEY,
@@ -55,7 +53,18 @@ func InitDB(databasePath string) (*sql.DB, error) {
 }
 
 func (r *todoRepository) GetTodos() ([]models.Todo, error) {
-	rows, err := r.db.Query("SELECT id, title, description, completed, priority, due_date, created_at, updated_at FROM todos")
+	rows, err := r.db.Query(`
+		SELECT 
+			id, 
+			title, 
+			description, 
+			completed, 
+			priority,
+			DATE_FORMAT(due_date, '%Y-%m-%dT%TZ') as due_date,
+			DATE_FORMAT(created_at, '%Y-%m-%dT%TZ') as created_at,
+			DATE_FORMAT(updated_at, '%Y-%m-%dT%TZ') as updated_at
+		FROM todos
+	`)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +73,16 @@ func (r *todoRepository) GetTodos() ([]models.Todo, error) {
 	var todos []models.Todo
 	for rows.Next() {
 		var todo models.Todo
-		err := rows.Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Completed, &todo.Priority, &todo.DueDate, &todo.CreatedAt, &todo.UpdatedAt)
+		err := rows.Scan(
+			&todo.ID,
+			&todo.Title,
+			&todo.Description,
+			&todo.Completed,
+			&todo.Priority,
+			&todo.DueDate,
+			&todo.CreatedAt,
+			&todo.UpdatedAt,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -76,22 +94,55 @@ func (r *todoRepository) GetTodos() ([]models.Todo, error) {
 
 func (r *todoRepository) GetTodo(id string) (models.Todo, error) {
 	var todo models.Todo
-	err := r.db.QueryRow("SELECT id, title, description, completed, priority, due_date, created_at, updated_at FROM todos WHERE id = ?", id).
-		Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Completed, &todo.Priority, &todo.DueDate, &todo.CreatedAt, &todo.UpdatedAt)
+
+	err := r.db.QueryRow(`
+		SELECT 
+			id, 
+			title, 
+			description, 
+			completed, 
+			priority,
+			DATE_FORMAT(due_date, '%Y-%m-%dT%TZ') as due_date,
+			DATE_FORMAT(created_at, '%Y-%m-%dT%TZ') as created_at,
+			DATE_FORMAT(updated_at, '%Y-%m-%dT%TZ') as updated_at
+		FROM todos WHERE id = ?`, id).
+		Scan(
+			&todo.ID,
+			&todo.Title,
+			&todo.Description,
+			&todo.Completed,
+			&todo.Priority,
+			&todo.DueDate,
+			&todo.CreatedAt,
+			&todo.UpdatedAt,
+		)
 	if err != nil {
 		return models.Todo{}, err
 	}
+
 	return todo, nil
 }
 
 func (r *todoRepository) CreateTodo(todo models.Todo) (models.Todo, error) {
 	todo.ID = uuid.New().String()
-	todo.CreatedAt = time.Now()
-	todo.UpdatedAt = time.Now()
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	todo.CreatedAt = now
+	todo.UpdatedAt = now
 
-	_, err := r.db.Exec(
-		"INSERT INTO todos (id, title, description, completed, priority, due_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		todo.ID, todo.Title, todo.Description, todo.Completed, todo.Priority, todo.DueDate, todo.CreatedAt, todo.UpdatedAt,
+	if todo.DueDate == "" {
+		todo.DueDate = now
+	}
+
+	_, err := r.db.Exec(`
+		INSERT INTO todos (
+			id, title, description, completed, priority, 
+			due_date, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, 
+			STR_TO_DATE(?, '%Y-%m-%dT%TZ'),
+			STR_TO_DATE(?, '%Y-%m-%dT%TZ'),
+			STR_TO_DATE(?, '%Y-%m-%dT%TZ'))`,
+		todo.ID, todo.Title, todo.Description, todo.Completed, todo.Priority,
+		todo.DueDate, todo.CreatedAt, todo.UpdatedAt,
 	)
 	if err != nil {
 		return models.Todo{}, err
@@ -101,17 +152,24 @@ func (r *todoRepository) CreateTodo(todo models.Todo) (models.Todo, error) {
 }
 
 func (r *todoRepository) UpdateTodo(id string, todo models.Todo) (models.Todo, error) {
-	todo.UpdatedAt = time.Now()
+	todo.UpdatedAt = time.Now().UTC().Format("2006-01-02T15:04:05Z")
 
-	_, err := r.db.Exec(
-		"UPDATE todos SET title = ?, description = ?, completed = ?, priority = ?, due_date = ?, updated_at = ? WHERE id = ?",
-		todo.Title, todo.Description, todo.Completed, todo.Priority, todo.DueDate, todo.UpdatedAt, id,
+	_, err := r.db.Exec(`
+		UPDATE todos SET 
+			title = ?, 
+			description = ?, 
+			completed = ?, 
+			priority = ?, 
+			due_date = STR_TO_DATE(?, '%Y-%m-%dT%TZ'),
+			updated_at = STR_TO_DATE(?, '%Y-%m-%dT%TZ')
+		WHERE id = ?`,
+		todo.Title, todo.Description, todo.Completed, todo.Priority,
+		todo.DueDate, todo.UpdatedAt, id,
 	)
 	if err != nil {
 		return models.Todo{}, err
 	}
 
-	// Get the updated todo
 	return r.GetTodo(id)
 }
 
